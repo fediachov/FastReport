@@ -8,12 +8,17 @@
 ***********/
 
 .{template_FR}-container {{
-    {(Width.IsNullOrWhiteSpace() ? "" : $"width: {Width};")};
-    {(Height.IsNullOrWhiteSpace() ? "" : $"height: {Height};")};
+    {(Width.IsNullOrWhiteSpace() ? "" : $"width: {Width};")}
+    {(Height.IsNullOrWhiteSpace() ? "" : $"height: {Height};")}
     background-color: white;
     display: {(Inline ? "inline-" : "")}flex;
     flex-direction: column;
     position: relative;
+}}
+
+.{template_FR}-container * {{
+    box-sizing: content-box;
+    -moz-box-sizing: content-box;
 }}
 
 .{template_FR}-body {{

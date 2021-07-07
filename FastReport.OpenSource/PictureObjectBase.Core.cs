@@ -10,7 +10,7 @@ namespace FastReport
         /// </summary>
         /// <param name="g"></param>
         /// <param name="e"></param>
-        protected void DrawErrorImage(Graphics g, FRPaintEventArgs e)
+        protected void DrawErrorImage(IGraphics g, FRPaintEventArgs e)
         {
 
         }
@@ -19,9 +19,6 @@ namespace FastReport
         /// Does nothing
         /// </summary>
         /// <param name="e"></param>
-        private void DrawDesign(FRPaintEventArgs e)
-        {
-           
-        }
+        partial void DrawDesign(FRPaintEventArgs e);
     }
 }

@@ -23,7 +23,7 @@ namespace FastReport
     /// <summary>
     /// Returned true if Color = Transparent
     /// </summary>
-    internal abstract bool IsTransparent
+    public abstract bool IsTransparent
     {
         get;
     }
@@ -118,7 +118,7 @@ namespace FastReport
       set { color = value; }
     }
 
-    internal override bool IsTransparent 
+    public override bool IsTransparent 
     {
         get { return color.A == 0; }
     }
@@ -215,7 +215,7 @@ namespace FastReport
       set { endColor = value; }
     }
 
-    internal override bool IsTransparent 
+    public override bool IsTransparent 
     {
         get { return startColor.A == 0 && endColor.A == 0; }
     }
@@ -419,7 +419,7 @@ namespace FastReport
       set { style = value; }
     }
 
-    internal override bool IsTransparent 
+    public override bool IsTransparent 
     {
         get { return centerColor.A == 0 && edgeColor.A == 0; }
     }
@@ -536,7 +536,7 @@ namespace FastReport
       set { style = value; }
     }
 
-    internal override bool IsTransparent 
+    public override bool IsTransparent 
     {
         get { return foreColor.A == 0 && backColor.A == 0; }
     }
@@ -644,7 +644,7 @@ namespace FastReport
       set { hatch = value; }
     }
 
-    internal override bool IsTransparent 
+    public override bool IsTransparent 
     {
         get { return color.A == 0; }
     }
@@ -866,7 +866,7 @@ namespace FastReport
             set { imageOffsetY = value; }
         }
 
-        internal override bool IsTransparent 
+        public override bool IsTransparent 
         {
             get { return false; }
         }
@@ -1119,7 +1119,8 @@ namespace FastReport
             Stream dummy = ResourceLoader.GetStream("FastReport", "icon16.ico");
             using (MemoryStream ms = new MemoryStream())
             {
-                Res.CopyTo(dummy, ms);
+                const int BUFFER_SIZE = 4 * 1024;
+                dummy.CopyTo(ms, BUFFER_SIZE);
                 SetImageData(ms.ToArray());
             }
             WrapMode = WrapMode.Tile;

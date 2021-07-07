@@ -259,6 +259,8 @@ namespace FastReport.Export
                 {
                     Result.Append("&nbsp;");
                 }
+                else if (text[i] == '<' && textRenderType == TextRenderType.HtmlTags && crlf == CRLF.odt)
+                    i += text.IndexOf('>', i) - i;
                 else if (i < text.Length - 1 && text[i] == '\r' && text[i + 1] == '\n')
                 {
                     if (crlf == CRLF.xml)
@@ -341,7 +343,7 @@ namespace FastReport.Export
             return sb.ToString();
         }
 
-        internal static FastString HtmlString(string text, TextRenderType textRenderType)
+        public static FastString HtmlString(string text, TextRenderType textRenderType)
         {
             return HtmlString(text, textRenderType, CRLF.html, false);
         }
@@ -537,16 +539,6 @@ namespace FastReport.Export
         internal static string GetID()
         {
             return SystemFake.Guid.NewGuid().ToString();
-        }
-
-        internal static void CopyStream(Stream source, Stream target)
-        {
-            source.Position = 0;
-            int bufflength = 2048;
-            byte[] buff = new byte[bufflength];
-            int i;
-            while ((i = source.Read(buff, 0, bufflength)) > 0)
-                target.Write(buff, 0, i);
         }
 
         internal static byte[] StringToByteArray(string source)

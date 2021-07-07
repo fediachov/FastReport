@@ -11,6 +11,7 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using System.Buffers;
 
 namespace FastReport.Web
 {
@@ -45,6 +46,16 @@ namespace FastReport.Web
         /// Callback method for saving an edited report by Online Designer
         /// Params: reportID, report file name, report, out - message
         /// </summary>
+        /// <example>
+        /// webReport.DesignerSaveMethod = (string reportID, string filename, string report) =>
+        /// {
+        ///     string webRootPath = _hostingEnvironment.WebRootPath;
+        ///     string pathToSave = Path.Combine(webRootPath, filename);
+        ///     System.IO.File.WriteAllTextAsync(pathToSave, report);
+        ///     
+        ///     return "OK";
+        /// };
+        /// </example>
         public Func<string, string, string, string> DesignerSaveMethod { get; set; }
 
         /// <summary>
@@ -119,18 +130,19 @@ namespace FastReport.Web
                 // paste restricted back in report before save
                 Report.LoadFromString(PasteRestricted(reportString));
 
-                SaveDesignedReportEventArgs e = new SaveDesignedReportEventArgs();
-                e.Stream = new MemoryStream();
-                Report.Save(e.Stream);
-                e.Stream.Position = 0;
-                OnSaveDesignedReport(e);
+                if (SaveDesignedReport != null)
+                {
+                    SaveDesignedReportEventArgs e = new SaveDesignedReportEventArgs();
+                    e.Stream = new MemoryStream();
+                    Report.Save(e.Stream);
+                    e.Stream.Position = 0;
+                    OnSaveDesignedReport(e);
+                }
 
                 if (!DesignerSaveCallBack.IsNullOrWhiteSpace())
                 {
                     string report = Report.SaveToString();
-                    var reportName = (!String.IsNullOrEmpty(Report.ReportInfo.Name) ?
-                        Report.ReportInfo.Name : Path.GetFileNameWithoutExtension(Report.FileName));
-                    string reportFileName = $"{reportName}.frx";
+                    string reportFileName = ReportFileName;
 
                     UriBuilder uri = new UriBuilder
                     {
@@ -321,12 +333,12 @@ namespace FastReport.Web
                 for (int i = reportInheritance.Count - 1; i >= 0; i--)
                 {
                     string s = reportInheritance[i];
-                    responseBuilder.Append("\"");
+                    responseBuilder.Append('\"');
                     responseBuilder.Append(s.Replace("\r\n", "").Replace("\"", "\\\""));
                     if (i > 0)
                         responseBuilder.Append("\",");
                     else
-                        responseBuilder.Append("\"");
+                        responseBuilder.Append('\"');
                 }
                 responseBuilder.Append("]}");
 
@@ -455,9 +467,13 @@ namespace FastReport.Web
                     {
                         xml.Save(secondXmlStream);
                         secondXmlStream.Position = 0;
-                        byte[] buff = new byte[secondXmlStream.Length];
-                        secondXmlStream.Read(buff, 0, buff.Length);
-                        xmlString = Encoding.UTF8.GetString(buff);
+                        bool rent = secondXmlStream.Length > 1024;
+                        byte[] buff = rent ?
+                            ArrayPool<byte>.Shared.Rent((int)secondXmlStream.Length)
+                            : new byte[secondXmlStream.Length];
+                        secondXmlStream.Read(buff, 0, (int)secondXmlStream.Length);
+                        xmlString = Encoding.UTF8.GetString(buff, 0, (int)secondXmlStream.Length);
+                        if (rent) ArrayPool<byte>.Shared.Return(buff);
                     }
                 }
             }
@@ -523,9 +539,13 @@ namespace FastReport.Web
                 {
                     xml2.Save(secondXmlStream);
                     secondXmlStream.Position = 0;
-                    byte[] buff = new byte[secondXmlStream.Length];
-                    secondXmlStream.Read(buff, 0, buff.Length);
-                    xmlString = Encoding.UTF8.GetString(buff);
+                    bool rent = secondXmlStream.Length > 1024;
+                    byte[] buff = rent ?
+                        ArrayPool<byte>.Shared.Rent((int)secondXmlStream.Length)
+                        : new byte[secondXmlStream.Length];
+                    secondXmlStream.Read(buff, 0, (int)secondXmlStream.Length);
+                    xmlString = Encoding.UTF8.GetString(buff, 0, (int)secondXmlStream.Length);
+                    if (rent) ArrayPool<byte>.Shared.Return(buff);
                 }
                 xml1.Dispose();
                 xml2.Dispose();
@@ -586,7 +606,7 @@ namespace FastReport.Web
         //    context.Response.Write(sb.ToString());
         //}
 
-        string GetPOSTReport(HttpContext context)
+        internal string GetPOSTReport(HttpContext context)
         {
             string requestString = "";
             using (TextReader textReader = new StreamReader(context.Request.Body))

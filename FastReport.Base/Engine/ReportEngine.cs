@@ -344,16 +344,6 @@ namespace FastReport.Engine
             }
         }
 
-        private void InitializePages()
-        {
-            for (int i = 0; i < Report.Pages.Count; i++)
-            {
-                ReportPage page = Report.Pages[i] as ReportPage;
-                if (page != null)
-                    PreparedPages.AddSourcePage(page);
-            }
-        }
-
         private void PrepareToFirstPass(bool append)
         {
             finalPass = !Report.DoublePass;
@@ -385,6 +375,8 @@ namespace FastReport.Engine
             while (band != null)
             {
                 if (CanPrint(band))
+                    result += (band.CanGrow || band.CanShrink) ? band.CalcHeight() : band.Height;
+                else if (FinalPass && !String.IsNullOrEmpty(band.VisibleExpression) && band.VisibleExpression.Contains("TotalPages"))
                     result += (band.CanGrow || band.CanShrink) ? band.CalcHeight() : band.Height;
                 band = band.Child;
                 if (band != null && ((band as ChildBand).FillUnusedSpace || (band as ChildBand).CompleteToNRows != 0))
@@ -423,15 +415,7 @@ namespace FastReport.Engine
 
         internal bool Run(bool runDialogs, bool append, bool resetDataState, ReportPage page)
         {
-            date = SystemFake.DateTime.Now;
-            Report.SetOperation(ReportOperation.Running);
-            ResetDesigningFlag();
-
-            // don't reset the data state if we run the hyperlink's detail page or refresh a report.
-            // This is necessary to keep data filtering settings alive
-            if (resetDataState)
-                InitializeData();
-            Report.OnStartReport(EventArgs.Empty);
+            RunPhase1(resetDataState);
 
             try
             {
@@ -477,12 +461,16 @@ namespace FastReport.Engine
             return true;
         }
 
-        internal void RunPhase1()
+        internal void RunPhase1(bool resetDataState = true)
         {
             date = SystemFake.DateTime.Now;
             Report.SetOperation(ReportOperation.Running);
             ResetDesigningFlag();
-            InitializeData();
+
+            // don't reset the data state if we run the hyperlink's detail page or refresh a report.
+            // This is necessary to keep data filtering settings alive
+            if (resetDataState)
+                InitializeData();
             Report.OnStartReport(EventArgs.Empty);
         }
 

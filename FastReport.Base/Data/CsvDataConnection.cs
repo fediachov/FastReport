@@ -6,6 +6,7 @@ using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Net;
+using FastReport.Utils;
 
 namespace FastReport.Data
 {
@@ -297,6 +298,8 @@ namespace FastReport.Data
             {
                 string allText = "";
 
+                ServicePointManager.Expect100Continue = true;
+                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072;
                 WebRequest request;
                 WebResponse response = null;
                 try
@@ -305,6 +308,8 @@ namespace FastReport.Data
 
                     if (uri.IsFile)
                     {
+                        if (Config.ForbidLocalData)
+                            throw new Exception(Res.Get("ConnectionEditors,Common,OnlyUrlException"));
                         request = (FileWebRequest)WebRequest.Create(uri);
                         request.Timeout = 5000;
                         response = (FileWebResponse)request.GetResponse();
@@ -470,6 +475,18 @@ namespace FastReport.Data
         public override string QuoteIdentifier(string value, DbConnection connection)
         {
             return value;
+        }
+
+
+        /// <inheritdoc/>
+        public override string[] GetTableNames()
+        {
+            string[] result = new string[DataSet.Tables.Count];
+            for (int i = 0; i < DataSet.Tables.Count; i++)
+            {
+                result[i] = DataSet.Tables[i].TableName;
+            }
+            return result;
         }
         #endregion Public Methods
     }

@@ -525,7 +525,7 @@ namespace FastReport
         /// </summary>
         [DefaultValue(0f)]
         [Category("Appearance")]
-        [TypeConverter("FastReport.TypeConverters.UnitsConverter, FastReport")]
+        //[TypeConverter("FastReport.TypeConverters.UnitsConverter, FastReport")]
         public float FirstTabOffset
         {
             get { return firstTabOffset; }
@@ -701,8 +701,8 @@ namespace FastReport
             if (!Underlines || Angle != 0)
                 return;
 
-            Graphics g = e.Graphics;
-            float lineHeight = LineHeight == 0 ? Font.GetHeight() : LineHeight;
+            IGraphics g = e.Graphics;
+            float lineHeight = LineHeight == 0 ? Font.GetHeight() * DrawUtils.ScreenDpiFX : LineHeight;
             lineHeight *= e.ScaleY;
             float curY = AbsTop * e.ScaleY + lineHeight + 1;
             Pen pen = e.Cache.GetPen(Border.Color, Border.Width * e.ScaleY, DashStyle.Solid);
@@ -729,8 +729,8 @@ namespace FastReport
                     width = Width - Padding.Horizontal;
             }
 
-            Graphics g = report.MeasureGraphics;
-            GraphicsState state = g.Save();
+            IGraphics g = report.MeasureGraphics;
+            IGraphicsState state = g.Save();
             try
             {
                 if (report.TextQuality != TextQuality.Default)
@@ -827,8 +827,8 @@ namespace FastReport
             RectangleF textRect = new RectangleF(0, 0, Width - Padding.Horizontal, Height - Padding.Vertical);
 
             int charactersFitted;
-            Graphics g = report.MeasureGraphics;
-            GraphicsState state = g.Save();
+            IGraphics g = report.MeasureGraphics;
+            IGraphicsState state = g.Save();
 
             if (report.TextQuality != TextQuality.Default)
                 g.TextRenderingHint = report.GetTextQuality();
@@ -879,8 +879,8 @@ namespace FastReport
             int charactersFitted;
             int linesFilled;
 
-            Graphics g = report.MeasureGraphics;
-            GraphicsState state = g.Save();
+            IGraphics g = report.MeasureGraphics;
+            IGraphicsState state = g.Save();
             try
             {
                 if (report.TextQuality != TextQuality.Default)
@@ -950,7 +950,7 @@ namespace FastReport
 
             if (AutoShrink == AutoShrinkMode.FontSize)
             {
-                while (CalcWidth() > Width - 1 && Font.Size > AutoShrinkMinSize)
+                while (CalcWidth() > Width - 1 && Font.Size > AutoShrinkMinSize && Font.Size>1)
                 {
                     Font = new Font(Font.Name, Font.Size - 1, Font.Style);
                 }
@@ -1053,7 +1053,7 @@ namespace FastReport
             paragraphFormat.Assign(src.paragraphFormat);
         }
 
-        internal HtmlTextRenderer GetHtmlTextRenderer(Graphics g, float scale, float fontScale)
+        internal HtmlTextRenderer GetHtmlTextRenderer(IGraphics g, float scale, float fontScale)
         {
             StringFormat format = GetStringFormat(Report.GraphicCache, 0, scale);
             RectangleF textRect = new RectangleF(
@@ -1065,30 +1065,30 @@ namespace FastReport
 
         }
 
-        internal HtmlTextRenderer GetHtmlTextRenderer(float scale, float fontScale)
+        public HtmlTextRenderer GetHtmlTextRenderer(float scale, float fontScale)
         {
             return GetHtmlTextRenderer(Report.MeasureGraphics, scale, fontScale);
         }
 
-        internal HtmlTextRenderer GetHtmlTextRenderer(Graphics g, RectangleF textRect, float scale, float fontScale)
+        internal HtmlTextRenderer GetHtmlTextRenderer(IGraphics g, RectangleF textRect, float scale, float fontScale)
         {
             StringFormat format = GetStringFormat(Report.GraphicCache, 0, fontScale);
             return GetHtmlTextRenderer(g, scale, fontScale, textRect, format);
         }
 
-        internal HtmlTextRenderer GetHtmlTextRenderer(Graphics g, float scale, float fontScale, RectangleF textRect, StringFormat format)
+        internal HtmlTextRenderer GetHtmlTextRenderer(IGraphics g, float scale, float fontScale, RectangleF textRect, StringFormat format)
         {
-            return GetHtmlTextRenderer(g, fontScale, scale, fontScale, textRect, format);
+            return GetHtmlTextRenderer(g, fontScale, scale, fontScale, textRect, format, false);
         }
 
 
-        internal HtmlTextRenderer GetHtmlTextRenderer(Graphics g, float formatScale, float scale, float fontScale, RectangleF textRect, StringFormat format)
+        internal HtmlTextRenderer GetHtmlTextRenderer(IGraphics g, float formatScale, float scale, float fontScale, RectangleF textRect, StringFormat format, bool isPrinting)
         {
             return new HtmlTextRenderer(Text, g, font.Name, font.Size, font.Style, TextColor,
                       textOutline.Color, textRect, Underlines,
                       format, horzAlign, vertAlign, ParagraphFormat.MultipleScale(formatScale), ForceJustify,
-                      scale * 96f / DrawUtils.ScreenDpi, fontScale * 96f / DrawUtils.ScreenDpi, InlineImageCache
-                      );
+                      scale * 96f / DrawUtils.ScreenDpi, fontScale * 96f / DrawUtils.ScreenDpi, InlineImageCache,
+                      isPrinting);
         }
 
         /// <summary>
@@ -1100,7 +1100,7 @@ namespace FastReport
             string text = Text;
             if (!String.IsNullOrEmpty(text))
             {
-                Graphics g = e.Graphics;
+                IGraphics g = e.Graphics;
                 RectangleF textRect = new RectangleF(
                   (AbsLeft + Padding.Left) * e.ScaleX,
                   (AbsTop + Padding.Top) * e.ScaleY,
@@ -1137,7 +1137,7 @@ namespace FastReport
                             try
                             {
                                 using (HtmlTextRenderer htmlRenderer = GetHtmlTextRenderer(e.Graphics, e.ScaleX,
-                                    IsPrinting ? 1 : e.ScaleX, IsPrinting ? 1 : e.ScaleX, textRect, format))
+                                    IsPrinting ? 1 : e.ScaleX, IsPrinting ? 1 / (96f / DrawUtils.ScreenDpi) : e.ScaleX, textRect, format, IsPrinting))
                                 {
                                     htmlRenderer.Draw();
                                 }
@@ -1156,7 +1156,7 @@ namespace FastReport
                                     outlinePen, textRect, format, HorzAlign, VertAlign, LineHeight * e.ScaleY, Angle,
                                     FontWidthRatio, ForceJustify, Wysiwyg, HasHtmlTags, false,
                                     e.ScaleX * 96f / DrawUtils.ScreenDpi,
-                                    IsPrinting ? 1 : e.ScaleX * 96f / DrawUtils.ScreenDpi, InlineImageCache);
+                                    IsPrinting ? 1 : e.ScaleX * 96f / DrawUtils.ScreenDpi, InlineImageCache, IsPrinting);
                                 advancedRenderer.Draw();
                             }
                             else
@@ -1166,6 +1166,9 @@ namespace FastReport
                                 {
                                     if (outlinePen == null)
                                     {
+                                        if (WordWrap)
+                                            format.Trimming = StringTrimming.Word;
+
                                         g.DrawString(text, font, textBrush, textRect, format);
                                     }
                                     else
@@ -1174,7 +1177,7 @@ namespace FastReport
                                         path.AddString(text, font.FontFamily, Convert.ToInt32(font.Style),
                                             g.DpiY * font.Size / 72, textRect, format);
 
-                                        GraphicsState state = g.Save();
+                                        IGraphicsState state = g.Save();
                                         g.SetClip(textRect);
                                         //g.FillPath(textBrush, path);
 
@@ -1585,7 +1588,7 @@ namespace FastReport
             if (renderer == null)
             {
                 using (Bitmap b = new Bitmap(1, 1))
-                using (Graphics g = Graphics.FromImage(b))
+                using (IGraphics g = new GdiGraphics(b))
                 {
                     RectangleF textRect = new RectangleF(
                       (AbsLeft + Padding.Left),

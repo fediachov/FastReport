@@ -6,19 +6,28 @@ using System.Text;
 
 namespace FastReport.Web.Application
 {
-    internal class WebRes
+    internal interface IWebRes
     {
-        private string category;
-        private bool localeLoaded = false;
-        private string badResult = "NOT LOCALIZED!";
+        void LoadLocale(string fileName);
+
+        void LoadLocale(Stream stream);
+
+        string Get(string id);
+
+        void Root(string Section);
+    }
+
+    internal class WebRes : IWebRes
+    {
+        //private XmlItem root;
+        private string[] categories;
+        private const string badResult = "NOT LOCALIZED!";
         private XmlDocument locale;
-        private XmlDocument builtinLocale;
+
+        private static readonly XmlDocument builtinLocale;
 
         public void LoadLocale(string fileName)
         {
-            if (!localeLoaded)
-                LoadBuiltinLocale();
-
             if (File.Exists(fileName))
             {
                 locale = new XmlDocument();
@@ -28,73 +37,68 @@ namespace FastReport.Web.Application
                 locale = builtinLocale;
         }
 
-        public string Get(string id)
+        public void LoadLocale(Stream stream)
         {
-            if (!String.IsNullOrEmpty(category))
-            {
-                if (id != "")
-                    return InternalGet(category + "," + id);
-                else
-                    return InternalGet(category);
-            }
-            else
-                return InternalGet(id);
+            locale = new XmlDocument();
+            locale.Load(stream);
         }
 
-        private string InternalGet(string id)
+        public string Get(string id)
         {
-            if (!localeLoaded)
-                LoadBuiltinLocale();
-
             string result = Get(id, locale);
             // if no item found, try built-in (english) locale
-            if (result.IndexOf(badResult) != -1 && locale != builtinLocale)
-                result = Get(id, builtinLocale);
+            if (string.IsNullOrEmpty(result))
+            {
+                if (locale != builtinLocale)
+                    result = Get(id, builtinLocale);
+
+                if (string.IsNullOrEmpty(result))
+                    result = id + " " + badResult;
+            }
             return result;
         }
 
         private string Get(string id, XmlDocument locale)
         {
-            string[] categories = id.Split(new char[] { ',' });
             XmlItem xi = locale.Root;
+            int i;
             foreach (string category in categories)
             {
-                int i = xi.Find(category);
+                i = xi.Find(category);
                 if (i == -1)
-                    return id + " " + badResult;
+                    return null;
                 xi = xi[i];
             }
-            string result = xi.GetProp("Text");
-            if (result == "")
-                result = id + " " + badResult;
-            return result;
+
+            // find 'id'
+            i = xi.Find(id);
+            if (i == -1)
+                return null;
+            xi = xi[i];
+
+            return xi.GetProp("Text");
         }
 
 
         public void Root(string Section)
         {
-            category = Section;
+            categories = Section.Split(',');
         }
 
-        private void LoadBuiltinLocale()
+        public WebRes(string Section = "")
         {
-            locale = new XmlDocument();
-            builtinLocale = locale;
+            locale = builtinLocale;
+
+            Root(Section);
+        }
+
+        static WebRes()
+        {
+            builtinLocale = new XmlDocument();
             using (Stream stream = ResourceLoader.GetStream("en.xml"))
             {
-                locale.Load(stream);
+                builtinLocale.Load(stream);
             }
-            localeLoaded = true;
-        }
-
-        public WebRes(string Section)
-        {
-            category = Section;
-        }
-
-        public WebRes()
-        {
-            category = "";
         }
     }
 }

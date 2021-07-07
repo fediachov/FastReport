@@ -60,7 +60,7 @@ namespace FastReport
         Slash,
 
         /// <summary>
-        /// Specifies a balck slash symbol.
+        /// Specifies a back slash symbol.
         /// </summary>
         BackSlash
     }
@@ -210,7 +210,7 @@ namespace FastReport
             float ratio = Width / (Units.Millimeters * 5);
             drawRect.Inflate(-4 * ratio * e.ScaleX, -4 * ratio * e.ScaleY);
             Pen pen = e.Cache.GetPen(CheckColor, 1.6f * ratio * CheckWidthRatio * e.ScaleX, DashStyle.Solid);
-            Graphics g = e.Graphics;
+            IGraphics g = e.Graphics;
             SmoothingMode saveSmoothing = g.SmoothingMode;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
@@ -249,12 +249,15 @@ namespace FastReport
                         g.DrawLine(pen, drawRect.Left, drawRect.Top, drawRect.Right, drawRect.Bottom);
                         g.DrawLine(pen, drawRect.Left, drawRect.Bottom, drawRect.Right, drawRect.Top);
                         break;
+
                     case UncheckedSymbol.Minus:
                         g.DrawLine(pen, drawRect.Left, drawRect.Top + drawRect.Height / 2, drawRect.Right, drawRect.Top + drawRect.Height / 2);
                         break;
+
                     case UncheckedSymbol.Slash:
                         g.DrawLine(pen, drawRect.Left, drawRect.Bottom, drawRect.Right, drawRect.Top);
                         break;
+
                     case UncheckedSymbol.BackSlash:
                         g.DrawLine(pen, drawRect.Left, drawRect.Top, drawRect.Right, drawRect.Bottom);
                         break;
